@@ -11,7 +11,7 @@ st.set_page_config(
 
 st.title("📚 Korean Dictionary Manager")
 
-st.write("Upload your Korean Dictionary Excel or CSV file.")
+st.write("Upload your Korean Dictionary (Excel or CSV)")
 
 uploaded_file = st.file_uploader(
     "Choose Excel or CSV File",
@@ -22,19 +22,38 @@ if uploaded_file is not None:
 
     try:
 
+        # Read file
         if uploaded_file.name.endswith(".csv"):
-            df = pd.read_csv(uploaded_file)
+            df = pd.read_csv(uploaded_file, header=None)
         else:
-            df = pd.read_excel(uploaded_file)
+            df = pd.read_excel(uploaded_file, header=None)
 
         st.subheader("Preview")
 
         st.dataframe(df, use_container_width=True)
 
-        st.write(f"Total Rows : {len(df)}")
+        st.write(f"📄 Total Rows : {len(df)}")
 
-        
+        if st.button("📥 Import Dictionary"):
 
+            added, updated, skipped = import_dictionary(df)
+
+            st.success("✅ Dictionary Imported Successfully!")
+
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.metric("Added", added)
+
+            with col2:
+                st.metric("Updated", updated)
+
+            with col3:
+                st.metric("Skipped", skipped)
+
+    except Exception as e:
+
+        st.error(f"❌ Error : {e}")
         else:
 
             if st.button("📥 Import Dictionary"):
