@@ -1,0 +1,65 @@
+import streamlit as st
+import pandas as pd
+
+from utils.importer import import_dictionary
+
+st.set_page_config(
+    page_title="Dictionary Manager",
+    page_icon="📚",
+    layout="wide"
+)
+
+st.title("📚 Korean Dictionary Manager")
+
+st.write("Upload your Korean Dictionary Excel or CSV file.")
+
+uploaded_file = st.file_uploader(
+    "Choose Excel or CSV File",
+    type=["xlsx", "csv"]
+)
+
+if uploaded_file is not None:
+
+    try:
+
+        if uploaded_file.name.endswith(".csv"):
+            df = pd.read_csv(uploaded_file)
+        else:
+            df = pd.read_excel(uploaded_file)
+
+        st.subheader("Preview")
+
+        st.dataframe(df, use_container_width=True)
+
+        st.write(f"Total Rows : {len(df)}")
+
+        required_columns = ["Korean", "Bangla"]
+
+        missing = [
+            col for col in required_columns
+            if col not in df.columns
+        ]
+
+        if missing:
+
+            st.error(
+                f"Missing Column : {', '.join(missing)}"
+            )
+
+        else:
+
+            if st.button("📥 Import Dictionary"):
+
+                added, updated, skipped = import_dictionary(df)
+
+                st.success("Import Complete")
+
+                col1, col2, col3 = st.columns(3)
+
+                col1.metric("Added", added)
+                col2.metric("Updated", updated)
+                col3.metric("Skipped", skipped)
+
+    except Exception as e:
+
+        st.error(e)
