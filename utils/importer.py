@@ -111,8 +111,7 @@ def import_dictionary(df):
     conn.commit()
     conn.close()
 
-    return added, updated, skipped            VALUES(?,?,?,?,?)
-            """,
+    return added, updated, skipped VALUES(?,?,?,?,?)""",
             (korean, bangla, english, pos, topik))
 
             added += 1
