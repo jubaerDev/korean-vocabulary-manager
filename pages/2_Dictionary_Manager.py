@@ -33,18 +33,7 @@ if uploaded_file is not None:
 
         st.write(f"Total Rows : {len(df)}")
 
-        required_columns = ["Korean", "Bangla"]
-
-        missing = [
-            col for col in required_columns
-            if col not in df.columns
-        ]
-
-        if missing:
-
-            st.error(
-                f"Missing Column : {', '.join(missing)}"
-            )
+        
 
         else:
 
