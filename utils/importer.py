@@ -1,5 +1,4 @@
 import sqlite3
-import pandas as pd
 
 DB_PATH = "database/dictionary.db"
 
@@ -26,37 +25,25 @@ def import_dictionary(df):
 
     create_table()
 
-    # কমপক্ষে ২টি কলাম থাকতে হবে
+    # প্রথম দুইটি কলাম নিন
     if len(df.columns) < 2:
         raise Exception("Excel/CSV ফাইলে কমপক্ষে ২টি কলাম থাকতে হবে।")
 
-    # শুধুমাত্র প্রথম দুইটি কলাম নিন
     df = df.iloc[:, :2].copy()
-
-    # কলামের নাম নির্দিষ্ট করুন
     df.columns = ["Korean", "Bangla"]
 
-    # Header চিনতে ব্যবহৃত তালিকা
+    # Header থাকলে বাদ দিন
     korean_headers = [
-        "korean",
-        "korean word",
-        "word",
-        "한국어",
-        "코리언 단어",
-        "단어"
+        "korean", "korean word", "word",
+        "한국어", "코리언 단어", "단어"
     ]
 
     bangla_headers = [
-        "bangla",
-        "বাংলা",
-        "বাংলা অর্থ",
-        "bengali",
-        "meaning"
+        "bangla", "বাংলা",
+        "বাংলা অর্থ", "bengali", "meaning"
     ]
 
-    # প্রথম Row Header কিনা পরীক্ষা
     if len(df) > 0:
-
         first_korean = str(df.iloc[0]["Korean"]).strip().lower()
         first_bangla = str(df.iloc[0]["Bangla"]).strip().lower()
 
@@ -75,7 +62,6 @@ def import_dictionary(df):
         korean = str(row["Korean"]).strip()
         bangla = str(row["Bangla"]).strip()
 
-        # ফাঁকা Row বাদ দিন
         if korean == "" or korean.lower() == "nan":
             skipped += 1
             continue
@@ -84,7 +70,6 @@ def import_dictionary(df):
             skipped += 1
             continue
 
-        # আগে থেকেই আছে কিনা দেখুন
         cur.execute(
             "SELECT korean FROM dictionary WHERE korean=?",
             (korean,)
@@ -92,17 +77,30 @@ def import_dictionary(df):
 
         if cur.fetchone():
 
-            cur.execute("""
-                UPDATE dictionary
-                SET bangla=?
-                WHERE korean=?
-            """, (bangla, korean))
+            cur.execute(
+                "UPDATE dictionary SET bangla=? WHERE korean=?",
+                (bangla, korean)
+            )
 
             updated += 1
 
         else:
 
-            cur.execute("""
+            cur.execute(
+                """
+                INSERT INTO dictionary
+                (korean, bangla, english, pos, topik)
+                VALUES (?, ?, '', '', '')
+                """,
+                (korean, bangla)
+            )
+
+            added += 1
+
+    conn.commit()
+    conn.close()
+
+    return added, updated, skipped            cur.execute("""
                 INSERT INTO dictionary
                 (korean, bangla, english, pos, topik)
                 VALUES (?, ?, '', '', '')
