@@ -1,60 +1,47 @@
 import sqlite3
+from datetime import datetime
+
+from utils.database import create_database
 
 DB_PATH = "database/dictionary.db"
 
 
-def create_table():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+def import_dictionary(df, chapter=""):
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS dictionary (
-            korean TEXT PRIMARY KEY,
-            bangla TEXT,
-            english TEXT DEFAULT '',
-            pos TEXT DEFAULT '',
-            topik TEXT DEFAULT ''
-        )
-    """)
-
-    conn.commit()
-    conn.close()
-
-
-def import_dictionary(df):
-    create_table()
+    create_database()
 
     # কমপক্ষে ২টি কলাম থাকতে হবে
     if len(df.columns) < 2:
         raise Exception("Excel/CSV ফাইলে কমপক্ষে ২টি কলাম থাকতে হবে।")
 
-    # প্রথম দুইটি কলাম ব্যবহার করুন
+    # প্রথম দুইটি কলাম নিন
     df = df.iloc[:, :2].copy()
+
     df.columns = ["Korean", "Bangla"]
 
-    # Header থাকলে বাদ দিন
-    header_korean = [
+    # Header Detect
+    korean_headers = [
         "korean",
-        "korean word",
         "word",
-        "코리언 단어",
+        "korean word",
         "한국어",
         "단어"
     ]
 
-    header_bangla = [
+    bangla_headers = [
         "bangla",
         "বাংলা",
         "বাংলা অর্থ",
-        "bengali",
-        "meaning"
+        "meaning",
+        "bengali"
     ]
 
     if len(df) > 0:
+
         first_korean = str(df.iloc[0]["Korean"]).strip().lower()
         first_bangla = str(df.iloc[0]["Bangla"]).strip().lower()
 
-        if first_korean in header_korean or first_bangla in header_bangla:
+        if first_korean in korean_headers or first_bangla in bangla_headers:
             df = df.iloc[1:].reset_index(drop=True)
 
     conn = sqlite3.connect(DB_PATH)
@@ -78,19 +65,31 @@ def import_dictionary(df):
             continue
 
         cursor.execute(
-            "SELECT korean FROM dictionary WHERE korean = ?",
+            """
+            SELECT id
+            FROM dictionary
+            WHERE korean=?
+            """,
             (korean,)
         )
 
-        if cursor.fetchone():
+        result = cursor.fetchone()
+
+        if result:
 
             cursor.execute(
                 """
                 UPDATE dictionary
-                SET bangla = ?
-                WHERE korean = ?
+                SET
+                    bangla=?,
+                    chapter=?
+                WHERE korean=?
                 """,
-                (bangla, korean)
+                (
+                    bangla,
+                    chapter,
+                    korean
+                )
             )
 
             updated += 1
@@ -100,10 +99,36 @@ def import_dictionary(df):
             cursor.execute(
                 """
                 INSERT INTO dictionary
-                (korean, bangla, english, pos, topik)
-                VALUES (?, ?, '', '', '')
+                (
+                    korean,
+                    root,
+                    bangla,
+                    english,
+                    pos,
+                    topik,
+                    chapter,
+                    frequency,
+                    source,
+                    created_at
+                )
+
+                VALUES
+                (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                )
                 """,
-                (korean, bangla)
+                (
+                    korean,               # korean
+                    korean,               # root
+                    bangla,               # bangla
+                    "",                   # english
+                    "",                   # pos
+                    "",                   # topik
+                    chapter,              # chapter
+                    0,                    # frequency
+                    "Manual Import",      # source
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                )
             )
 
             added += 1
