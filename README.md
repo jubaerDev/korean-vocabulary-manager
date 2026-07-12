@@ -2,12 +2,10 @@
 
 A web application built with Python and Streamlit.
 
-## Features
+## Version 1.1
 
-- Korean Word Extraction
-- Frequency Count
+- Dashboard
+- Word Extractor
 - Excel Export
-- CSV Export
-- TXT Export
 
 Project by Jubaer islam
