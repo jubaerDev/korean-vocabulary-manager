@@ -6,7 +6,7 @@ from utils.database import create_database
 DB_PATH = "database/dictionary.db"
 
 
-def import_dictionary(df, chapter=""):
+def import_dictionary(df):
 
     create_database()
 
