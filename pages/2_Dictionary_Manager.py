@@ -12,104 +12,93 @@ st.set_page_config(
 
 st.title("📚 Korean Dictionary Manager")
 
-st.write("Upload your Korean Dictionary (Excel or CSV)")
+st.write("Upload one or more Excel / CSV files")
 
-uploaded_file = st.file_uploader(
-    "Choose Excel or CSV File",
-    type=["xlsx", "xls", "csv"]
+uploaded_files = st.file_uploader(
+    "Choose Excel or CSV Files",
+    type=["xlsx", "xls", "csv"],
+    accept_multiple_files=True
 )
 
-if uploaded_file is not None:
+if uploaded_files:
 
-    try:
+    st.success(f"{len(uploaded_files)} file(s) selected")
 
-        # ---------- Read File ----------
-        if uploaded_file.name.lower().endswith(".csv"):
+    for file in uploaded_files:
+        st.write("📄", file.name)
+
+    if st.button("📥 Import All Files"):
+
+        total_added = 0
+        total_updated = 0
+        total_skipped = 0
+
+        progress = st.progress(0)
+
+        for index, uploaded_file in enumerate(uploaded_files):
 
             try:
-                df = pd.read_csv(
-                    uploaded_file,
-                    header=None,
-                    encoding="utf-8"
-                )
 
-            except UnicodeDecodeError:
-
-                uploaded_file.seek(0)
-
-                try:
-                    df = pd.read_csv(
-                        uploaded_file,
-                        header=None,
-                        encoding="utf-8-sig"
-                    )
-
-                except UnicodeDecodeError:
-
-                    uploaded_file.seek(0)
+                # Read File
+                if uploaded_file.name.lower().endswith(".csv"):
 
                     try:
-                        df = pd.read_csv(
-                            uploaded_file,
-                            header=None,
-                            encoding="cp949"
-                        )
+                        df = pd.read_csv(uploaded_file, header=None, encoding="utf-8")
 
                     except UnicodeDecodeError:
 
                         uploaded_file.seek(0)
 
-                        df = pd.read_csv(
-                            uploaded_file,
-                            header=None,
-                            encoding="latin1"
-                        )
+                        try:
+                            df = pd.read_csv(uploaded_file, header=None, encoding="utf-8-sig")
 
-        else:
+                        except UnicodeDecodeError:
 
-            df = pd.read_excel(
-                uploaded_file,
-                header=None
-            )
+                            uploaded_file.seek(0)
 
-        # ---------- Chapter ----------
-        chapter = os.path.splitext(uploaded_file.name)[0]
+                            try:
+                                df = pd.read_csv(uploaded_file, header=None, encoding="cp949")
 
-        st.success(f"📁 Chapter : {chapter}")
+                            except UnicodeDecodeError:
 
-        st.subheader("Preview")
+                                uploaded_file.seek(0)
 
-        st.dataframe(
-            df,
-            use_container_width=True
-        )
+                                df = pd.read_csv(uploaded_file, header=None, encoding="latin1")
 
-        st.info(f"📄 Total Rows : {len(df)}")
+                else:
 
-        if st.button("📥 Import Dictionary"):
+                    df = pd.read_excel(uploaded_file, header=None)
 
-            added, updated, skipped = import_dictionary(
-                df,
-                chapter
-            )
+                chapter = os.path.splitext(uploaded_file.name)[0]
 
-            st.success("✅ Import Completed Successfully!")
+                added, updated, skipped = import_dictionary(
+                    df,
+                    chapter
+                )
 
-            col1, col2, col3 = st.columns(3)
+                total_added += added
+                total_updated += updated
+                total_skipped += skipped
 
-            with col1:
-                st.metric("Added", added)
+            except Exception as e:
 
-            with col2:
-                st.metric("Updated", updated)
+                st.error(f"❌ {uploaded_file.name} : {e}")
 
-            with col3:
-                st.metric("Skipped", skipped)
+            progress.progress((index + 1) / len(uploaded_files))
 
-    except Exception as e:
+        st.success("✅ Import Finished")
 
-        st.error(f"❌ {e}")
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            st.metric("Added", total_added)
+
+        with col2:
+            st.metric("Updated", total_updated)
+
+        with col3:
+            st.metric("Skipped", total_skipped)
 
 else:
 
-    st.info("⬆️ Upload an Excel or CSV file to begin.")
+    st.info("⬆️ Select one or more Excel / CSV files.")

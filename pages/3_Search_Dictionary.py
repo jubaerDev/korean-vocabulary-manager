@@ -1,6 +1,6 @@
-import streamlit as st
 import sqlite3
 import pandas as pd
+import streamlit as st
 
 DB_PATH = "database/dictionary.db"
 
@@ -15,22 +15,39 @@ def get_connection():
     return sqlite3.connect(DB_PATH)
 
 
-st.title("📚 Dictionary Search & Manager")
-
 conn = get_connection()
 
-# -------------------------------
+st.title("🔍 Dictionary Search & Manager")
+
+# ============================
+# Statistics
+# ============================
+
+total = conn.execute(
+    "SELECT COUNT(*) FROM dictionary"
+).fetchone()[0]
+
+st.metric("📚 Total Words", total)
+
+st.divider()
+
+# ============================
 # Add New Word
-# -------------------------------
+# ============================
+
 with st.expander("➕ Add New Word"):
 
-    new_korean = st.text_input("Korean Word")
-    new_bangla = st.text_input("Bangla Meaning")
+    korean = st.text_input("Korean Word")
+
+    bangla = st.text_input("Bangla Meaning")
+
+    chapter = st.text_input("Chapter (Optional)")
 
     if st.button("Add Word"):
 
-        if new_korean.strip() == "" or new_bangla.strip() == "":
-            st.warning("সব ঘর পূরণ করুন।")
+        if korean.strip() == "" or bangla.strip() == "":
+
+            st.warning("Please fill all required fields.")
 
         else:
 
@@ -39,33 +56,59 @@ with st.expander("➕ Add New Word"):
                 conn.execute(
                     """
                     INSERT INTO dictionary
-                    (korean,bangla)
-                    VALUES (?,?)
+                    (
+                        korean,
+                        root,
+                        bangla,
+                        english,
+                        pos,
+                        topik,
+                        chapter,
+                        frequency,
+                        source,
+                        created_at
+                    )
+                    VALUES
+                    (
+                        ?, ?, ?, '', '', '', ?, 0,
+                        'Manual',
+                        datetime('now')
+                    )
                     """,
                     (
-                        new_korean.strip(),
-                        new_bangla.strip()
+                        korean.strip(),
+                        korean.strip(),
+                        bangla.strip(),
+                        chapter.strip()
                     )
                 )
 
                 conn.commit()
 
-                st.success("Word Added Successfully")
+                st.success("✅ Word Added Successfully")
+
+                st.rerun()
 
             except sqlite3.IntegrityError:
 
-                st.error("এই Word আগে থেকেই আছে।")
+                st.error("❌ Word already exists.")
 
-# -------------------------------
+st.divider()
+
+# ============================
 # Search
-# -------------------------------
+# ============================
 
 search = st.text_input(
-    "🔍 Search Korean / Bangla"
+    "Search Korean or Bangla"
 )
 
 query = """
-SELECT rowid,korean,bangla
+SELECT
+    id,
+    korean,
+    bangla,
+    chapter
 FROM dictionary
 """
 
@@ -75,7 +118,7 @@ if search:
 
     query += """
     WHERE korean LIKE ?
-    OR bangla LIKE ?
+       OR bangla LIKE ?
     """
 
     params = (
@@ -91,20 +134,26 @@ df = pd.read_sql_query(
     params=params
 )
 
-st.write(f"### Total Result : {len(df)}")
+st.success(f"Found {len(df)} word(s)")
 
-# -------------------------------
-# Edit / Delete
-# -------------------------------
+# ============================
+# Result
+# ============================
 
 for _, row in df.iterrows():
 
     with st.expander(f"🇰🇷 {row['korean']}"):
 
         bangla = st.text_input(
-            "Bangla",
+            "Bangla Meaning",
             value=row["bangla"],
-            key=f"bangla_{row['rowid']}"
+            key=f"bangla_{row['id']}"
+        )
+
+        chapter = st.text_input(
+            "Chapter",
+            value=row["chapter"] if row["chapter"] else "",
+            key=f"chapter_{row['id']}"
         )
 
         col1, col2 = st.columns(2)
@@ -113,18 +162,21 @@ for _, row in df.iterrows():
 
             if st.button(
                 "💾 Save",
-                key=f"save_{row['rowid']}"
+                key=f"save_{row['id']}"
             ):
 
                 conn.execute(
                     """
                     UPDATE dictionary
-                    SET bangla=?
-                    WHERE rowid=?
+                    SET
+                        bangla=?,
+                        chapter=?
+                    WHERE id=?
                     """,
                     (
                         bangla,
-                        row["rowid"]
+                        chapter,
+                        row["id"]
                     )
                 )
 
@@ -132,26 +184,29 @@ for _, row in df.iterrows():
 
                 st.success("Updated Successfully")
 
+                st.rerun()
+
         with col2:
 
             if st.button(
                 "🗑 Delete",
-                key=f"delete_{row['rowid']}"
+                key=f"delete_{row['id']}"
             ):
 
                 conn.execute(
                     """
                     DELETE FROM dictionary
-                    WHERE rowid=?
+                    WHERE id=?
                     """,
                     (
-                        row["rowid"],
+                        row["id"],
                     )
                 )
 
                 conn.commit()
 
                 st.success("Deleted Successfully")
+
                 st.rerun()
 
 conn.close()
