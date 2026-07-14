@@ -1,56 +1,64 @@
 import streamlit as st
+import pandas as pd
 
-from utils.extractor import extract_korean_words
-from utils.exporter import (
-    export_excel,
-    export_csv,
-    export_txt
+from utils.grammar import extract_words
+from utils.search import search_word, increase_search_count
+
+st.set_page_config(
+    page_title="Word Extractor",
+    page_icon="🔍",
+    layout="wide"
 )
 
-st.title("📄 Korean Word Extractor")
+st.title("🔍 Korean Word Extractor")
 
-paragraph = st.text_area(
-    "Paste Korean Paragraph",
+text = st.text_area(
+    "Paste Korean Text",
     height=250
 )
 
-if st.button("Extract"):
+if st.button("🔍 Extract Words"):
 
-    words, df = extract_korean_words(paragraph)
-
-    if len(words) == 0:
-        st.warning("No Korean words found.")
+    if text.strip() == "":
+        st.warning("Please enter Korean text.")
         st.stop()
 
-    st.metric("Total Words", len(words))
-    st.metric("Unique Words", len(df))
+    words = extract_words(text)
 
-    search = st.text_input("🔍 Search Word")
+    results = []
 
-    if search:
-        df = df[df["Word"].str.contains(search)]
+    for item in words:
 
-    st.dataframe(df, use_container_width=True)
+        original = item["original"]
+        root = item["root"]
 
-    col1, col2, col3 = st.columns(3)
+        result = search_word(root)
 
-    with col1:
-        st.download_button(
-            "📥 Excel",
-            export_excel(df),
-            "korean_words.xlsx"
-        )
+        if result:
 
-    with col2:
-        st.download_button(
-            "📥 CSV",
-            export_csv(df),
-            "korean_words.csv"
-        )
+            increase_search_count(root)
 
-    with col3:
-        st.download_button(
-            "📥 TXT",
-            export_txt(df),
-            "korean_words.txt"
-        )
+            results.append({
+                "Original": original,
+                "Root": root,
+                "Bangla": result["bangla"],
+                "Status": "✅ Found"
+            })
+
+        else:
+
+            results.append({
+                "Original": original,
+                "Root": root,
+                "Bangla": "",
+                "Status": "❌ Not Found"
+            })
+
+    df = pd.DataFrame(results)
+
+    st.success(f"Extracted {len(df)} unique words.")
+
+    st.dataframe(
+        df,
+        use_container_width=True
+    )

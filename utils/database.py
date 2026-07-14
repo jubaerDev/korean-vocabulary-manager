@@ -12,6 +12,7 @@ def create_database():
     conn = get_connection()
     cur = conn.cursor()
 
+    # -------- Dictionary Table --------
     cur.execute("""
     CREATE TABLE IF NOT EXISTS dictionary (
 
@@ -52,25 +53,28 @@ def create_database():
     )
     """)
 
-    # Upgrade old database
-    cur.execute("PRAGMA table_info(dictionary)")
-    existing = [row[1] for row in cur.fetchall()]
+    # -------- Missing Words Table --------
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS missing_words (
 
-    new_columns = {
-        "example_kr": "TEXT",
-        "example_bn": "TEXT",
-        "notes": "TEXT",
-        "favorite": "INTEGER DEFAULT 0",
-        "search_count": "INTEGER DEFAULT 0",
-        "updated_at": "TEXT"
-    }
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-    for col, dtype in new_columns.items():
-        if col not in existing:
-            cur.execute(f"ALTER TABLE dictionary ADD COLUMN {col} {dtype}")
+        korean TEXT UNIQUE,
+
+        root TEXT,
+
+        sentence TEXT,
+
+        chapter TEXT,
+
+        status TEXT DEFAULT 'Pending',
+
+        created_at TEXT
+
+    )
+    """)
 
     conn.commit()
     conn.close()
-
 
 create_database()
