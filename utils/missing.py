@@ -37,6 +37,7 @@ def add_missing_word(korean, root="", sentence="", chapter=""):
         "Pending",
         datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     ))
+    
 
     conn.commit()
     conn.close()
