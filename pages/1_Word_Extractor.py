@@ -2,7 +2,11 @@ import streamlit as st
 import pandas as pd
 
 from utils.grammar import extract_words
-from utils.search import search_word, increase_search_count
+from utils.search import (
+    search_word,
+    increase_search_count,
+    add_word
+)
 
 st.set_page_config(
     page_title="Word Extractor",
