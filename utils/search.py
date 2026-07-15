@@ -1,7 +1,6 @@
 import sqlite3
 from datetime import datetime
 
-
 DB_PATH = "database/dictionary.db"
 
 
@@ -13,25 +12,28 @@ def get_connection():
     )
 
 
+# ==========================
+# Search Original Word
+# ==========================
+
 def search_word(word):
 
-    conn = get_connection()
-    conn.row_factory = sqlite3.Row
+    with get_connection() as conn:
 
-    cur = conn.cursor()
+        conn.row_factory = sqlite3.Row
 
-    cur.execute(
-        """
-        SELECT *
-        FROM dictionary
-        WHERE korean=?
-        """,
-        (word,)
-    )
+        cur = conn.cursor()
 
-    row = cur.fetchone()
+        cur.execute(
+            """
+            SELECT *
+            FROM dictionary
+            WHERE korean = ?
+            """,
+            (word,)
+        )
 
-    conn.close()
+        row = cur.fetchone()
 
     if row:
         return dict(row)
@@ -39,20 +41,59 @@ def search_word(word):
     return None
 
 
+# ==========================
+# Search Root Word
+# ==========================
+
+def search_root(root):
+
+    with get_connection() as conn:
+
+        conn.row_factory = sqlite3.Row
+
+        cur = conn.cursor()
+
+        cur.execute(
+            """
+            SELECT *
+            FROM dictionary
+            WHERE root = ?
+            """,
+            (root,)
+        )
+
+        row = cur.fetchone()
+
+    if row:
+        return dict(row)
+
+    return None
+
+
+# ==========================
+# Increase Search Count
+# ==========================
+
 def increase_search_count(word):
 
-    conn = get_connection()
+    with get_connection() as conn:
 
-    conn.execute(
-        """
-        UPDATE dictionary
-        SET search_count = search_count + 1
-        WHERE korean=?
-        """,
-        (word,)
-    )
-    conn.commit()
-    conn.close()
+        conn.execute(
+            """
+            UPDATE dictionary
+            SET search_count = search_count + 1
+            WHERE korean = ?
+            """,
+            (word,)
+        )
+
+        conn.commit()
+
+
+# ==========================
+# Add New Word
+# ==========================
+
 def add_word(
     korean,
     bangla,
@@ -61,41 +102,71 @@ def add_word(
     source="Word Extractor"
 ):
 
-    conn = get_connection()
+    if root == "":
+        root = korean
 
-    cur = conn.cursor()
+    with get_connection() as conn:
 
-    cur.execute(
-        """
-        INSERT OR IGNORE INTO dictionary
-        (
-            korean,
-            root,
-            bangla,
-            english,
-            pos,
-            topik,
-            chapter,
-            frequency,
-            source,
-            created_at
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO dictionary
+            (
+                korean,
+                root,
+                bangla,
+                english,
+                pos,
+                topik,
+                chapter,
+                frequency,
+                source,
+                created_at,
+                updated_at
+            )
+
+            VALUES
+            (
+                ?, ?, ?, '', '', '', ?, 0, ?, ?, ?
+            )
+            """,
+            (
+                korean,
+                root,
+                bangla,
+                chapter,
+                source,
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            )
         )
 
-        VALUES
-        (
-            ?, ?, ?, '', '', '', ?, 0, ?, ?
-        )
-        """,
-        (
-            korean,
-            root,
-            bangla,
-            chapter,
-            source,
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        )
-    )
+        conn.commit()
 
 
-    conn.commit()
-    conn.close()
+# ==========================
+# Update Existing Word
+# ==========================
+
+def update_word(
+    korean,
+    bangla
+):
+
+    with get_connection() as conn:
+
+        conn.execute(
+            """
+            UPDATE dictionary
+            SET
+                bangla=?,
+                updated_at=?
+            WHERE korean=?
+            """,
+            (
+                bangla,
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                korean
+            )
+        )
+
+        conn.commit()
