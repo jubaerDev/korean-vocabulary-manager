@@ -4,8 +4,8 @@ import pandas as pd
 from utils.grammar import extract_words
 from utils.search import (
     search_word,
-    increase_search_count,
-    add_word
+    search_root,
+    increase_search_count
 )
 
 st.set_page_config(
@@ -23,7 +23,7 @@ text = st.text_area(
 
 if st.button("🔍 Extract Words"):
 
-    if text.strip() == "":
+    if not text.strip():
         st.warning("Please enter Korean text.")
         st.stop()
 
@@ -36,27 +36,63 @@ if st.button("🔍 Extract Words"):
         original = item["original"]
         root = item["root"]
 
-        result = search_word(root)
+        # ----------------------------------
+        # Step 1 : Search Original Word
+        # ----------------------------------
+
+        result = search_word(original)
+
+        found_by = ""
+
+        # ----------------------------------
+        # Step 2 : If not found search Root
+        # ----------------------------------
+
+        if result is None:
+
+            result = search_root(root)
+
+            if result:
+                found_by = "Root"
+
+        else:
+            found_by = "Original"
+
+        # ----------------------------------
+        # Found
+        # ----------------------------------
 
         if result:
 
-            increase_search_count(root)
+            increase_search_count(result["korean"])
 
-            results.append({
-                "Original": original,
-                "Root": root,
-                "Bangla": result["bangla"],
-                "Status": "✅ Found"
-            })
+            results.append(
+                {
+                    "Original": original,
+                    "Root": root,
+                    "Bangla": result["bangla"],
+                    "Matched": result["korean"],
+                    "Found By": found_by,
+                    "Status": "✅ Found"
+                }
+            )
+
+        # ----------------------------------
+        # Not Found
+        # ----------------------------------
 
         else:
 
-            results.append({
-                "Original": original,
-                "Root": root,
-                "Bangla": "",
-                "Status": "❌ Not Found"
-            })
+            results.append(
+                {
+                    "Original": original,
+                    "Root": root,
+                    "Bangla": "",
+                    "Matched": "",
+                    "Found By": "",
+                    "Status": "❌ Not Found"
+                }
+            )
 
     df = pd.DataFrame(results)
 
