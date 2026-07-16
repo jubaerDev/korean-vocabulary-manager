@@ -102,3 +102,42 @@ if uploaded_files:
 else:
 
     st.info("⬆️ Select one or more Excel / CSV files.")
+# =====================================================
+# Dictionary Viewer
+# =====================================================
+
+st.divider()
+
+st.subheader("📖 Dictionary")
+
+show_dictionary = st.button(
+    "📖 Show Dictionary"
+)
+
+if show_dictionary:
+
+    from utils.database import get_connection
+
+    conn = get_connection()
+
+    df = pd.read_sql_query(
+        """
+        SELECT
+            korean,
+            bangla,
+            chapter
+        FROM dictionary
+        ORDER BY korean
+        """,
+        conn
+    )
+
+    conn.close()
+
+    st.success(f"Total Words : {len(df)}")
+
+    st.dataframe(
+        df,
+        use_container_width=True,
+        hide_index=True
+    )
