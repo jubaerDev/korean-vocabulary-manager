@@ -81,13 +81,14 @@ if st.button(
     st.session_state.words = get_words_by_chapter(
         chapter
     )
+
     if practice_mode == "Random":
 
-    st.session_state.words = (
-        st.session_state.words
-        .sample(frac=1)
-        .reset_index(drop=True)
-    )
+        st.session_state.words = (
+            st.session_state.words
+            .sample(frac=1)
+            .reset_index(drop=True)
+        )
 
     st.session_state.current_index = 0
 
