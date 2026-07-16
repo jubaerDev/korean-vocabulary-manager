@@ -161,9 +161,7 @@ st.write("")
 # Main Practice Area
 # ==========================================
 
-left, right = st.columns(
-    [5, 1]
-)
+left, right = st.columns([5, 1])
 
 with left:
 
@@ -182,23 +180,7 @@ with left:
         unsafe_allow_html=True
     )
 
-    st.markdown(
-        "<div style='text-align:center;'>",
-        unsafe_allow_html=True
-    )
-
-    if not st.session_state.show_meaning:
-
-        if st.button(
-            "👁 Show Meaning",
-            use_container_width=False
-        ):
-
-            st.session_state.show_meaning = True
-
-            st.rerun()
-
-    else:
+    if st.session_state.show_meaning:
 
         st.markdown(
             f"""
@@ -215,43 +197,36 @@ with left:
             unsafe_allow_html=True
         )
 
-    st.markdown(
-        "</div>",
-        unsafe_allow_html=True
-    )
-
 with right:
 
     st.write("")
     st.write("")
-    st.write("")
 
-    if st.button(
-        "✅",
-        use_container_width=True
-    ):
+    # ✅ Correct
+    if st.button("✅", use_container_width=True):
 
         st.session_state.correct += 1
-
         st.session_state.current_index += 1
-
         st.session_state.show_meaning = False
-
         st.rerun()
 
-    if st.button(
-        "❌",
-        use_container_width=True
-    ):
+    # 👁 Show Meaning
+    if not st.session_state.show_meaning:
+
+        if st.button("👁", use_container_width=True):
+
+            st.session_state.show_meaning = True
+            st.rerun()
+
+    else:
+
+        st.button("👁", disabled=True, use_container_width=True)
+
+    # ❌ Wrong
+    if st.button("❌", use_container_width=True):
 
         st.session_state.wrong += 1
-
-        st.session_state.wrong_words.append(
-            row.to_dict()
-        )
-
+        st.session_state.wrong_words.append(row.to_dict())
         st.session_state.current_index += 1
-
         st.session_state.show_meaning = False
-
         st.rerun()
