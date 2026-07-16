@@ -161,7 +161,9 @@ st.write("")
 # Main Practice Area
 # ==========================================
 
-left, right = st.columns([5, 1])
+left, right = st.columns(
+    [5, 1]
+)
 
 with left:
 
@@ -180,7 +182,23 @@ with left:
         unsafe_allow_html=True
     )
 
-    if st.session_state.show_meaning:
+    st.markdown(
+        "<div style='text-align:center;'>",
+        unsafe_allow_html=True
+    )
+
+    if not st.session_state.show_meaning:
+
+        if st.button(
+            "👁 Show Meaning",
+            use_container_width=False
+        ):
+
+            st.session_state.show_meaning = True
+
+            st.rerun()
+
+    else:
 
         st.markdown(
             f"""
@@ -197,6 +215,11 @@ with left:
             unsafe_allow_html=True
         )
 
+    st.markdown(
+        "</div>",
+        unsafe_allow_html=True
+    )
+
 with right:
 
     st.write("")
@@ -210,18 +233,6 @@ with right:
         st.session_state.show_meaning = False
         st.rerun()
 
-    # 👁 Show Meaning
-    if not st.session_state.show_meaning:
-
-        if st.button("👁", use_container_width=True):
-
-            st.session_state.show_meaning = True
-            st.rerun()
-
-    else:
-
-        st.button("👁", disabled=True, use_container_width=True)
-
     # ❌ Wrong
     if st.button("❌", use_container_width=True):
 
@@ -230,3 +241,11 @@ with right:
         st.session_state.current_index += 1
         st.session_state.show_meaning = False
         st.rerun()
+
+    # 👁 Show Meaning
+    if not st.session_state.show_meaning:
+
+        if st.button("👁 Show Meaning", use_container_width=True):
+
+            st.session_state.show_meaning = True
+            st.rerun()
