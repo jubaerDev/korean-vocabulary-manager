@@ -46,3 +46,34 @@ def get_words(chapter):
     conn.close()
 
     return df
+def compare_chapters(
+    chapter_a,
+    chapter_b
+):
+
+    df_a = get_words(chapter_a)
+
+    df_b = get_words(chapter_b)
+
+    # Remove duplicate words
+    df_a = df_a.drop_duplicates(
+        subset=["korean"]
+    )
+
+    df_b = df_b.drop_duplicates(
+        subset=["korean"]
+    )
+
+    # Find words that exist only in Chapter B
+    unique_df = df_b[
+        ~df_b["korean"].isin(
+            df_a["korean"]
+        )
+    ].copy()
+
+    # Sort alphabetically
+    unique_df = unique_df.sort_values(
+        by="korean"
+    ).reset_index(drop=True)
+
+    return unique_df
