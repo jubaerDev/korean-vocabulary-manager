@@ -66,9 +66,81 @@ if uploaded_file:
     st.success(
         f"{len(df)} rows loaded."
     )
+# ==========================================
+# Search Common Word
+# ==========================================
+
+st.divider()
+
+st.subheader("🔍 Search Common Word")
+
+search = st.text_input(
+    "Search Korean Word"
+)
+
+if search:
+
+    preview = preview[
+        preview["korean"]
+        .str.contains(
+            search,
+            case=False,
+            na=False
+        )
+    ]
 
     st.dataframe(
         df.head(10),
+        use_container_width=True
+    )
+# ==========================================
+# Export
+# ==========================================
+
+st.divider()
+
+st.subheader("⬇ Export")
+
+col1, col2 = st.columns(2)
+
+with col1:
+
+    csv = preview[
+        ["korean", "bangla"]
+    ].to_csv(
+        index=False,
+        encoding="utf-8-sig"
+    )
+
+    st.download_button(
+        "📄 Export CSV (Flashcard)",
+        data=csv,
+        file_name="Common_Words.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
+
+with col2:
+
+    import io
+
+    excel_buffer = io.BytesIO()
+
+    with pd.ExcelWriter(
+        excel_buffer,
+        engine="openpyxl"
+    ) as writer:
+
+        preview.to_excel(
+            writer,
+            index=False
+        )
+
+    st.download_button(
+        "📘 Export Excel",
+        data=excel_buffer.getvalue(),
+        file_name="Common_Words.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         use_container_width=True
     )
 
