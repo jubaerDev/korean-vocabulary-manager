@@ -367,7 +367,7 @@ st.divider()
 
 st.subheader("📖 Common Words")
 
-if preview.empty():
+if preview.empty:
 
     st.info("No Common Words Found.")
 
