@@ -75,23 +75,22 @@ def create_database():
     )
     """)
         # -------- Common Words Table --------
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS common_words (
 
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+cur.execute("""
+CREATE TABLE IF NOT EXISTS common_words (
 
-        korean TEXT UNIQUE,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-        bangla TEXT,
+    korean TEXT UNIQUE,
 
-        english TEXT,
+    bangla TEXT,
 
-        category TEXT,
+    source TEXT,
 
-        created_at TEXT
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
 
-    )
-    """)
+)
+""")
 
 
     conn.commit()
