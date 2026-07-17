@@ -312,3 +312,51 @@ def is_common_word(word):
     conn.close()
 
     return found
+# ==========================================
+# Delete All Common Words
+# ==========================================
+
+def delete_all_common_words():
+
+    conn = get_common_connection()
+
+    cur = conn.cursor()
+
+    cur.execute(
+        "DELETE FROM common_words"
+    )
+
+    conn.commit()
+
+    conn.execute("VACUUM")
+
+    conn.close()
+
+
+# ==========================================
+# Duplicate Count
+# ==========================================
+
+def common_duplicate_count():
+
+    conn = get_common_connection()
+
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT COUNT(*) FROM
+        (
+            SELECT korean
+            FROM common_words
+            GROUP BY korean
+            HAVING COUNT(*)>1
+        )
+        """
+    )
+
+    total = cur.fetchone()[0]
+
+    conn.close()
+
+    return total
