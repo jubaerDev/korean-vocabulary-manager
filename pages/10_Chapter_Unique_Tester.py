@@ -1,5 +1,11 @@
 import streamlit as st
 import pandas as pd
+import io
+
+
+# ==========================================
+# PAGE CONFIG
+# ==========================================
 
 st.set_page_config(
     page_title="Chapter Unique Tester",
@@ -7,145 +13,122 @@ st.set_page_config(
     layout="wide"
 )
 
+
 st.title("🧪 Chapter Unique Tester")
 
 st.write(
-    "Generate unique vocabulary using Common Words and two Chapters."
+    "Generate unique vocabulary using Common Words and Chapters."
 )
+
 
 st.divider()
 
+
+# ==========================================
+# FILE UPLOAD
+# ==========================================
+
 common_file = st.file_uploader(
-    "📂 Common Words File",
+    "📂 Upload Common Words",
     type=["xlsx", "csv"],
     key="common"
 )
 
+
 chapter1_file = st.file_uploader(
-    "📂 Chapter 1",
+    "📂 Upload Chapter 1",
     type=["xlsx", "csv"],
     key="chapter1"
 )
 
+
 chapter2_file = st.file_uploader(
-    "📂 Chapter 2",
+    "📂 Upload Chapter 2",
     type=["xlsx", "csv"],
     key="chapter2"
 )
+
 
 generate = st.button(
     "🚀 Generate",
     use_container_width=True
 )
+
+
+
 # ==========================================
-# Read File
+# LOAD FILE FUNCTION
 # ==========================================
 
 def load_file(uploaded_file):
 
     if uploaded_file.name.lower().endswith(".csv"):
 
-        try:
-            df = pd.read_csv(
-                uploaded_file,
-                header=None,
-                encoding="utf-8"
-            )
+        encodings = [
+            "utf-8",
+            "utf-8-sig",
+            "cp949",
+            "latin1"
+        ]
 
-        except:
 
-            uploaded_file.seek(0)
+        for enc in encodings:
 
             try:
-                df = pd.read_csv(
+
+                uploaded_file.seek(0)
+
+                return pd.read_csv(
                     uploaded_file,
                     header=None,
-                    encoding="utf-8-sig"
+                    encoding=enc
                 )
 
             except:
 
-                uploaded_file.seek(0)
+                continue
 
-                try:
-                    df = pd.read_csv(
-                        uploaded_file,
-                        header=None,
-                        encoding="cp949"
-                    )
 
-                except:
+        raise Exception(
+            "CSV file encoding error"
+        )
 
-                    uploaded_file.seek(0)
-
-                    df = pd.read_csv(
-                        uploaded_file,
-                        header=None,
-                        encoding="latin1"
-                    )
 
     else:
 
-        df = pd.read_excel(
+        return pd.read_excel(
             uploaded_file,
             header=None
         )
 
-    return df
 
 
 # ==========================================
-# Generate
-# ==========================================
-
-if generate:
-
-    if (
-        common_file is None
-        or
-        chapter1_file is None
-        or
-        chapter2_file is None
-    ):
-
-        st.warning(
-            "Please select all three files."
-        )
-
-        st.stop()
-
-    common_df = load_file(common_file)
-
-    chapter1_df = load_file(chapter1_file)
-
-    chapter2_df = load_file(chapter2_file)
-
-    st.success("✅ Files loaded successfully.")
-
-    st.write("Common Words :", len(common_df))
-    st.write("Chapter 1 :", len(chapter1_df))
-    st.write("Chapter 2 :", len(chapter2_df))
-# ==========================================
-# Clean Data
+# CLEAN WORD FUNCTION
 # ==========================================
 
 def clean_words(df):
 
-    # Keep only first two columns
+    # Keep first two columns
+
     df = df.iloc[:, :2].copy()
+
 
     df.columns = [
         "korean",
         "bangla"
     ]
 
-    # Convert to string
+
+    # Convert string
+
     df["korean"] = (
         df["korean"]
         .fillna("")
         .astype(str)
         .str.strip()
     )
+
 
     df["bangla"] = (
         df["bangla"]
@@ -154,12 +137,16 @@ def clean_words(df):
         .str.strip()
     )
 
-    # Remove empty rows
+
+    # Remove empty
+
     df = df[
         df["korean"] != ""
     ]
 
-    # Remove common header rows
+
+    # Remove headers
+
     headers = [
         "korean",
         "bangla",
@@ -170,191 +157,591 @@ def clean_words(df):
         "뜻"
     ]
 
+
     df = df[
         ~df["korean"]
         .str.lower()
         .isin(headers)
     ]
 
-    # Remove duplicate Korean words
+
+    # Remove duplicate
+
     df = df.drop_duplicates(
         subset=["korean"]
     )
 
-    df = df.reset_index(
+
+    return df.reset_index(
         drop=True
     )
-
-    return df
-
-
-# Clean all files
-common_df = clean_words(common_df)
-
-chapter1_df = clean_words(chapter1_df)
-
-chapter2_df = clean_words(chapter2_df)
-
-st.success("✅ Data cleaned successfully.")
-
-st.write("Common Words :", len(common_df))
-st.write("Chapter 1 :", len(chapter1_df))
-st.write("Chapter 2 :", len(chapter2_df))
 # ==========================================
-# Create Unique Chapters
+# GENERATE PROCESS
 # ==========================================
 
-# Common word set
-common_set = set(common_df["korean"])
+if generate:
 
-# ----------------------------
-# Chapter 1 Unique
-# ----------------------------
 
-chapter1_unique = chapter1_df[
-    ~chapter1_df["korean"].isin(common_set)
-].copy()
+    # Check files
 
-master_set = set(
-    chapter1_unique["korean"]
-)
+    if (
+        common_file is None
+        or chapter1_file is None
+        or chapter2_file is None
+    ):
 
-# ----------------------------
-# Chapter 2 Unique
-# ----------------------------
-
-chapter2_unique = chapter2_df[
-    ~chapter2_df["korean"].isin(common_set)
-].copy()
-
-chapter2_unique = chapter2_unique[
-    ~chapter2_unique["korean"].isin(master_set)
-].copy()
-
-# Update Master Set
-master_set.update(
-    chapter2_unique["korean"]
-)
-
-st.success("✅ Unique chapters created successfully.")
-
-st.subheader("Result")
-
-col1, col2 = st.columns(2)
-
-with col1:
-
-    st.metric(
-        "Chapter 1 Unique",
-        len(chapter1_unique)
-    )
-
-    st.dataframe(
-        chapter1_unique,
-        use_container_width=True,
-        hide_index=True,
-        height=350
-    )
-
-with col2:
-
-    st.metric(
-        "Chapter 2 Unique",
-        len(chapter2_unique)
-    )
-
-    st.dataframe(
-        chapter2_unique,
-        use_container_width=True,
-        hide_index=True,
-        height=350
-    )
-# ==========================================
-# Download Files
-# ==========================================
-
-import io
-
-st.divider()
-
-st.subheader("⬇ Download Unique Chapters")
-
-col1, col2 = st.columns(2)
-
-# ==========================================
-# Chapter 1
-# ==========================================
-
-with col1:
-
-    excel_buffer = io.BytesIO()
-
-    with pd.ExcelWriter(
-        excel_buffer,
-        engine="openpyxl"
-    ) as writer:
-
-        chapter1_unique.to_excel(
-            writer,
-            index=False
+        st.warning(
+            "⚠️ Please upload all three files."
         )
 
-    st.download_button(
-        "📥 Chapter1_Unique.xlsx",
-        data=excel_buffer.getvalue(),
-        file_name="Chapter1_Unique.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
+        st.stop()
+
+
+
+    # ======================================
+    # LOAD FILES
+    # ======================================
+
+    common_df = load_file(
+        common_file
     )
 
-    csv = chapter1_unique.to_csv(
-        index=False,
-        encoding="utf-8-sig"
+
+    chapter1_df = load_file(
+        chapter1_file
     )
 
-    st.download_button(
-        "📄 Chapter1_Unique.csv",
-        data=csv,
-        file_name="Chapter1_Unique.csv",
-        mime="text/csv",
-        use_container_width=True
+
+    chapter2_df = load_file(
+        chapter2_file
     )
 
-# ==========================================
-# Chapter 2
-# ==========================================
 
-with col2:
 
-    excel_buffer = io.BytesIO()
+    st.success(
+        "✅ Files loaded successfully."
+    )
 
-    with pd.ExcelWriter(
-        excel_buffer,
-        engine="openpyxl"
-    ) as writer:
 
-        chapter2_unique.to_excel(
-            writer,
-            index=False
+
+    # ======================================
+    # CLEAN DATA
+    # ======================================
+
+    common_df = clean_words(
+        common_df
+    )
+
+
+    chapter1_df = clean_words(
+        chapter1_df
+    )
+
+
+    chapter2_df = clean_words(
+        chapter2_df
+    )
+
+
+
+    st.success(
+        "✅ Data cleaned successfully."
+    )
+
+
+
+    # Show count
+
+    col1, col2, col3 = st.columns(3)
+
+
+    with col1:
+
+        st.metric(
+            "Common Words",
+            len(common_df)
         )
 
-    st.download_button(
-        "📥 Chapter2_Unique.xlsx",
-        data=excel_buffer.getvalue(),
-        file_name="Chapter2_Unique.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
+
+    with col2:
+
+        st.metric(
+            "Chapter 1",
+            len(chapter1_df)
+        )
+
+
+    with col3:
+
+        st.metric(
+            "Chapter 2",
+            len(chapter2_df)
+        )
+
+
+
+    st.divider()
+
+
+
+    # ======================================
+    # CREATE UNIQUE WORDS
+    # ======================================
+
+
+    # Common word set
+
+    common_set = set(
+        common_df["korean"]
     )
 
-    csv = chapter2_unique.to_csv(
-        index=False,
-        encoding="utf-8-sig"
+
+
+    # ======================================
+    # CHAPTER 1 UNIQUE
+    # ======================================
+
+
+    chapter1_unique = chapter1_df[
+        ~chapter1_df["korean"]
+        .isin(common_set)
+    ].copy()
+
+
+
+    # Master set
+
+    master_set = set(
+        chapter1_unique["korean"]
     )
 
-    st.download_button(
-        "📄 Chapter2_Unique.csv",
-        data=csv,
-        file_name="Chapter2_Unique.csv",
-        mime="text/csv",
-        use_container_width=True
+
+
+    # ======================================
+    # CHAPTER 2 UNIQUE
+    # ======================================
+
+
+    chapter2_unique = chapter2_df[
+        ~chapter2_df["korean"]
+        .isin(common_set)
+    ].copy()
+
+
+
+    chapter2_unique = chapter2_unique[
+        ~chapter2_unique["korean"]
+        .isin(master_set)
+    ].copy()
+
+
+
+    st.success(
+        "✅ Unique vocabulary created."
     )
+# ==========================================
+# RESULT DISPLAY
+# ==========================================
+
+
+    st.subheader(
+        "📊 Unique Vocabulary Result"
+    )
+
+
+    result_col1, result_col2 = st.columns(2)
+
+
+
+    # ======================================
+    # CHAPTER 1 RESULT
+    # ======================================
+
+    with result_col1:
+
+
+        st.metric(
+            "Chapter 1 Unique Words",
+            len(chapter1_unique)
+        )
+
+
+        st.dataframe(
+            chapter1_unique,
+            use_container_width=True,
+            hide_index=True,
+            height=400
+        )
+
+
+
+    # ======================================
+    # CHAPTER 2 RESULT
+    # ======================================
+
+    with result_col2:
+
+
+        st.metric(
+            "Chapter 2 Unique Words",
+            len(chapter2_unique)
+        )
+
+
+        st.dataframe(
+            chapter2_unique,
+            use_container_width=True,
+            hide_index=True,
+            height=400
+        )
+
+
+
+    st.divider()
+
+
+
+    # ======================================
+    # PREVIEW INFORMATION
+    # ======================================
+
+
+    st.subheader(
+        "🔎 Preview Information"
+    )
+
+
+    preview_col1, preview_col2 = st.columns(2)
+
+
+
+    with preview_col1:
+
+        st.write(
+            "Chapter 1 Preview (First 10 words)"
+        )
+
+        st.dataframe(
+            chapter1_unique.head(10),
+            use_container_width=True,
+            hide_index=True
+        )
+
+
+
+    with preview_col2:
+
+        st.write(
+            "Chapter 2 Preview (First 10 words)"
+        )
+
+        st.dataframe(
+            chapter2_unique.head(10),
+            use_container_width=True,
+            hide_index=True
+        )
+# ==========================================
+# DOWNLOAD SECTION
+# ==========================================
+
+
+    st.subheader(
+        "⬇ Download Unique Vocabulary"
+    )
+
+
+    download_col1, download_col2 = st.columns(2)
+
+
+
+    # ======================================
+    # CHAPTER 1 DOWNLOAD
+    # ======================================
+
+    with download_col1:
+
+
+        st.write(
+            "📘 Chapter 1 Unique"
+        )
+
+
+        # Excel
+
+        excel_buffer1 = io.BytesIO()
+
+
+        with pd.ExcelWriter(
+            excel_buffer1,
+            engine="openpyxl"
+        ) as writer:
+
+
+            chapter1_unique.to_excel(
+                writer,
+                index=False,
+                sheet_name="Chapter1"
+            )
+
+
+        st.download_button(
+
+            label="📥 Download Chapter1 Excel",
+
+            data=excel_buffer1.getvalue(),
+
+            file_name="Chapter1_Unique.xlsx",
+
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+            use_container_width=True
+
+        )
+
+
+
+        # CSV
+
+        csv1 = chapter1_unique.to_csv(
+            index=False,
+            encoding="utf-8-sig"
+        )
+
+
+        st.download_button(
+
+            label="📄 Download Chapter1 CSV",
+
+            data=csv1,
+
+            file_name="Chapter1_Unique.csv",
+
+            mime="text/csv",
+
+            use_container_width=True
+
+        )
+
+
+
+
+
+    # ======================================
+    # CHAPTER 2 DOWNLOAD
+    # ======================================
+
+    with download_col2:
+
+
+        st.write(
+            "📗 Chapter 2 Unique"
+        )
+
+
+        # Excel
+
+        excel_buffer2 = io.BytesIO()
+
+
+        with pd.ExcelWriter(
+            excel_buffer2,
+            engine="openpyxl"
+        ) as writer:
+
+
+            chapter2_unique.to_excel(
+                writer,
+                index=False,
+                sheet_name="Chapter2"
+            )
+
+
+        st.download_button(
+
+            label="📥 Download Chapter2 Excel",
+
+            data=excel_buffer2.getvalue(),
+
+            file_name="Chapter2_Unique.xlsx",
+
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+            use_container_width=True
+
+        )
+
+
+
+        # CSV
+
+        csv2 = chapter2_unique.to_csv(
+            index=False,
+            encoding="utf-8-sig"
+        )
+
+
+        st.download_button(
+
+            label="📄 Download Chapter2 CSV",
+
+            data=csv2,
+
+            file_name="Chapter2_Unique.csv",
+
+            mime="text/csv",
+
+            use_container_width=True
+
+        )# ==========================================
+# DOWNLOAD SECTION
+# ==========================================
+
+
+    st.subheader(
+        "⬇ Download Unique Vocabulary"
+    )
+
+
+    download_col1, download_col2 = st.columns(2)
+
+
+
+    # ======================================
+    # CHAPTER 1 DOWNLOAD
+    # ======================================
+
+    with download_col1:
+
+
+        st.write(
+            "📘 Chapter 1 Unique"
+        )
+
+
+        # Excel
+
+        excel_buffer1 = io.BytesIO()
+
+
+        with pd.ExcelWriter(
+            excel_buffer1,
+            engine="openpyxl"
+        ) as writer:
+
+
+            chapter1_unique.to_excel(
+                writer,
+                index=False,
+                sheet_name="Chapter1"
+            )
+
+
+        st.download_button(
+
+            label="📥 Download Chapter1 Excel",
+
+            data=excel_buffer1.getvalue(),
+
+            file_name="Chapter1_Unique.xlsx",
+
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+            use_container_width=True
+
+        )
+
+
+
+        # CSV
+
+        csv1 = chapter1_unique.to_csv(
+            index=False,
+            encoding="utf-8-sig"
+        )
+
+
+        st.download_button(
+
+            label="📄 Download Chapter1 CSV",
+
+            data=csv1,
+
+            file_name="Chapter1_Unique.csv",
+
+            mime="text/csv",
+
+            use_container_width=True
+
+        )
+
+
+
+
+
+    # ======================================
+    # CHAPTER 2 DOWNLOAD
+    # ======================================
+
+    with download_col2:
+
+
+        st.write(
+            "📗 Chapter 2 Unique"
+        )
+
+
+        # Excel
+
+        excel_buffer2 = io.BytesIO()
+
+
+        with pd.ExcelWriter(
+            excel_buffer2,
+            engine="openpyxl"
+        ) as writer:
+
+
+            chapter2_unique.to_excel(
+                writer,
+                index=False,
+                sheet_name="Chapter2"
+            )
+
+
+        st.download_button(
+
+            label="📥 Download Chapter2 Excel",
+
+            data=excel_buffer2.getvalue(),
+
+            file_name="Chapter2_Unique.xlsx",
+
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+            use_container_width=True
+
+        )
+
+
+
+        # CSV
+
+        csv2 = chapter2_unique.to_csv(
+            index=False,
+            encoding="utf-8-sig"
+        )
+
+
+        st.download_button(
+
+            label="📄 Download Chapter2 CSV",
+
+            data=csv2,
+
+            file_name="Chapter2_Unique.csv",
+
+            mime="text/csv",
+
+            use_container_width=True
+
+        )
