@@ -304,7 +304,6 @@ with tool_col1:
         )
 
 with tool_col2:
-
     if not preview.empty:
 
         excel_buffer = io.BytesIO()
